@@ -65,7 +65,6 @@ After removing "Make", we still have a predictor that has VIF score greater than
 ```{r}
 vif(reduced_1)
 ```
-
 ```{r}
 reduced_2 <- lm(selling_price_dollars ~ .-Make-engine,
              data = vehicles_lr)
@@ -95,12 +94,12 @@ I just rename our final model and check for the model significance and individua
 
 ```{r}
 # rename reduced_2 as final_model
-final_model <- lm(selling_price ~ .-Make-engine,
-             data = vehicles)
+final_model <- lm(selling_price_dollars ~ .-Make-engine,
+             data = vehicles_lr)
 summary(final_model)
 ```
 
-Our model is significant based on p value of F-statistics < 0.05 but we have some predictors are not significant. 
+Our model is significant based on p value of F-statistics < 2.2e-16 but we have some predictors are not significant. 
 
 Now, we will test the significance of the individual predictors.
 
@@ -110,8 +109,8 @@ Now, we will test the significance of the individual predictors.
 
 ```{r}
 #without fuel
-null_model1 <- lm(selling_price ~ .-Make-engine-fuel,
-             data = vehicles)
+null_model1 <- lm(selling_price_dollars ~ .-Make-engine-fuel,
+             data = vehicles_lr)
 
 #full vs without fuel
 anova(final_model, null_model1)
@@ -124,8 +123,8 @@ anova(final_model, null_model1)
 
 ```{r}
 #without owner
-null_model2 <- lm(selling_price ~ .-Make-engine-owner,
-             data = vehicles)
+null_model2 <- lm(selling_price_dollars ~ .-Make-engine-owner,
+             data = vehicles_lr)
 
 #full vs without owner
 anova(final_model, null_model2)
@@ -138,8 +137,8 @@ anova(final_model, null_model2)
 
 ```{r}
 #without owner + fuel
-null_model3 <- lm(selling_price ~ .-Make-engine-owner-fuel,
-             data = vehicles)
+null_model3 <- lm(selling_price_dollars ~ .-Make-engine-owner-fuel,
+             data = vehicles_lr)
 
 #full vs without fuel + owner
 anova(final_model, null_model3)
