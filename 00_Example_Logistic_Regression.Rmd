@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-cars <- read_csv("data/cars_preprocessed.csv")
+cars <- read_csv("data/cars_processed.csv")
 
 head(cars)
 
