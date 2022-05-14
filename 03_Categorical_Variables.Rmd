@@ -1,0 +1,30 @@
+---
+title: "03 Categorical Variable Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Packages
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tidyverse)
+```
+
+# Read Data
+```{r}
+# Read data
+vehicles <- read_csv("data/cars_processed.csv")
+
+# Convert chr columns to factors 
+factor_column_names <- colnames(vehicles %>% select(where(is.character)))
+vehicles[, factor_column_names] <- lapply(vehicles[,factor_column_names], factor)
+
+head(vehicles)
+```
+
