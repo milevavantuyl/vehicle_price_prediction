@@ -1,122 +1,50 @@
 ---
-title: "Stat_Project"
-author: "Deniz KB"
-date: '2022-05-07'
+title: "04 Linear Regression"
 output: html_document
 ---
 
-# Preprocessing
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-* Droping NAs, \
-* Removing units of "max_power", "engine", "mileage", \
-* Converting "max_power", "engine", "mileage" into numeric column, \
-* Splitting "name" into "Make" and "Model" \
-* Removing "Make" counts less than 10 \
-* Removing "torque" and "Model" \
-* "year"
-  - for EDA: We keep year as it is.
-  - for Regression: We convert "year" into "age" and remove "year".
-
-
-
-
+# Load Packages
 ```{r}
 library(readr)
 library(dplyr)
 library(stringr)
 library(tidyr)
+library(tidyverse)
+```
 
-car_details <- read_csv("data/car_details_raw.csv")
-#Droping NAs
-vehicles <- car_details %>% drop_na()
+# Read Data
+```{r}
+# Read data
+vehicles <- read_csv("data/cars_processed.csv")
 
-#run once
-#Removing of the units of max_power, engine, mileage
-vehicles$max_power <- substr(vehicles$max_power, 1, nchar(vehicles$max_power)-4)
-vehicles$engine <- substr(vehicles$engine, 1, nchar(vehicles$engine)-3)
-vehicles$mileage <- substr(vehicles$mileage, 1, nchar(vehicles$mileage)-5)
-
-#Converting max_power, engine, mileage into numeric column
-vehicles <- transform(vehicles, mileage = as.numeric(mileage))
-vehicles <- transform(vehicles, engine = as.numeric(engine))
-vehicles <- transform(vehicles, max_power = as.numeric(max_power))
-
-#Splitting "name" into "Make" and "Model"
-vehicles <- vehicles %>% mutate(name = str_replace(name, "\\s", "|")) %>% 
-  separate(name, into = c("Make", "Model"), sep = "\\|")
-
-#Checking for categories of "Make"
-#table(vehicles$Make)
-#Removing "Make" counts less than 10
-vehicles <- subset(vehicles, !(Make %in% c('Ambassador', 'Ashok', 'Daewoo', 'Force', 'Isuzu', 'Kia', 'Land', 'MG', 'Opel')))
-
-#Removing torque, Model
-vehicles <- select(vehicles, -torque)
-vehicles <- select(vehicles, -Model)
-
-#We keep year for EDA; we convert it into age and remove year for regression.
-vehicles$age <- 2022 - vehicles$year
-vehicles <- select(vehicles, -year)
+# Convert chr columns to factors 
+factor_column_names <- colnames(vehicles %>% select(where(is.character)))
+vehicles[, factor_column_names] <- lapply(vehicles[,factor_column_names], factor)
 
 head(vehicles)
-str(vehicles)
 ```
 
-# Further Discovery
+
+# Features for linear regression model
 
 ```{r}
-#levels of Make
-unique(vehicles$Make)
-
-#levels of fuel
-unique(vehicles$fuel)
-
-#levels of seller_type
-unique(vehicles$seller_type)
-
-#levels of transmission
-unique(vehicles$transmission)
-
-#levels of owner 
-unique(vehicles$owner)
-
-#unique values of seats
-sort(unique(vehicles$seats))
-
-#unique values of age
-sort(unique(vehicles$age))
+vehicles_lr <- vehicles %>% select(-c(year, selling_price, selling_price_binary))
+head(vehicles_lr)
 ```
-
-
-```{r}
-#Distribution of selling_price
-hist(vehicles$selling_price)
-
-#Distribution of km_driven
-hist(vehicles$km_driven)
-
-#Distribution of mileage
-hist(vehicles$mileage)
-
-#Distribution of engine
-hist(vehicles$engine)
-
-#Distribution of max_power
-hist(vehicles$max_power)
-```
-
 
 # Fitting the initial Full Multiple Linear Regression Model
 
 ```{r}
 #Multiple linear regression
-mlr_obj <- lm(selling_price ~ .,
-             data = vehicles)
+mlr_obj <- lm(selling_price_dollars ~ .,
+             data = vehicles_lr)
 summary(mlr_obj)
 #full model is significant but there are some individual predictors are not significant.
 ```
-
-
 
 # Checking for Collinearity 
 
@@ -124,14 +52,12 @@ summary(mlr_obj)
 
 ```{r}
 library(car)
-vif(mlr_obj)  # Will throw an error due to perfect collinearity.
+vif(mlr_obj) 
 ```
 
-
 ```{r}
-reduced_1 <- lm(selling_price ~ .-Make,
-             data = vehicles)
-#summary(reduced_1)
+reduced_1 <- lm(selling_price_dollars ~ .-Make, 
+             data = vehicles_lr)
 ```
 
 After removing "Make", we still have a predictor that has VIF score greater than 5. We drop "engine" in next step.
@@ -141,8 +67,8 @@ vif(reduced_1)
 ```
 
 ```{r}
-reduced_2 <- lm(selling_price ~ .-Make-engine,
-             data = vehicles)
+reduced_2 <- lm(selling_price_dollars ~ .-Make-engine,
+             data = vehicles_lr)
 #summary(reduced_2)
 ```
 
@@ -151,7 +77,6 @@ All predictors have VIF scores less than 5 in reduced model.
 ```{r}
 vif(reduced_2)
 ```
-
 
 # Variable Selection via Backward AIC
 
@@ -254,30 +179,5 @@ plot(final_model, which = 1)
 
 
 
-```{r}
 
-
-```
-
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
 

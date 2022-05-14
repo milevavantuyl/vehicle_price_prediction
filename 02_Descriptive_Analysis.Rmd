@@ -1,0 +1,73 @@
+---
+title: "02 Descriptive Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Packages
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tidyverse)
+```
+
+# Read Data
+```{r}
+# Read data
+vehicles <- read_csv("data/cars_processed.csv")
+
+# Convert chr columns to factors 
+factor_column_names <- colnames(vehicles %>% select(where(is.character)))
+vehicles[, factor_column_names] <- lapply(vehicles[,factor_column_names], factor)
+
+head(vehicles)
+```
+
+# Further Discovery
+
+## Factor Levels
+```{r}
+#levels of Make
+unique(vehicles$Make)
+
+#levels of fuel
+unique(vehicles$fuel)
+
+#levels of seller_type
+unique(vehicles$seller_type)
+
+#levels of transmission
+unique(vehicles$transmission)
+
+#levels of owner 
+unique(vehicles$owner)
+
+#unique values of seats
+sort(unique(vehicles$seats))
+
+#unique values of age
+sort(unique(vehicles$age))
+```
+## Distributions of Numeric Variables
+```{r}
+#Distribution of selling_price
+hist(vehicles$selling_price)
+
+#Distribution of km_driven
+hist(vehicles$km_driven)
+
+#Distribution of mileage
+hist(vehicles$mileage)
+
+#Distribution of engine
+hist(vehicles$engine)
+
+#Distribution of max_power
+hist(vehicles$max_power)
+```
+
