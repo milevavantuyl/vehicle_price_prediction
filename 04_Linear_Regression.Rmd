@@ -28,7 +28,6 @@ vehicles[, factor_column_names] <- lapply(vehicles[,factor_column_names], factor
 head(vehicles)
 ```
 
-
 # Features for linear regression model
 
 ```{r}
@@ -36,7 +35,8 @@ vehicles_lr <- vehicles %>% select(-c(year, selling_price, selling_price_binary)
 head(vehicles_lr)
 ```
 
-# Fitting the initial Full Multiple Linear Regression Model
+# Expectation 3
+## Fitting the initial Full Multiple Linear Regression Model
 
 ```{r}
 #Multiple linear regression
@@ -46,7 +46,7 @@ summary(mlr_obj)
 #full model is significant but there are some individual predictors are not significant.
 ```
 
-# Checking for Collinearity 
+## Checking for Collinearity 
 
 "Make" has the greatest VIF score that is greater than 5. We remove this column.
 
@@ -77,7 +77,7 @@ All predictors have VIF scores less than 5 in reduced model.
 vif(reduced_2)
 ```
 
-# Variable Selection via Backward AIC
+## Variable Selection via Backward AIC
 
 After handling collinearity, we will select the most efficient predictors for our model by using AIC. 
 
@@ -88,7 +88,7 @@ step(reduced_2)
 ```
 
 
-# Significance of Categorical Variables
+## Significance of Categorical Variables
 
 I just rename our final model and check for the model significance and individual predictor significance.
 
@@ -144,14 +144,162 @@ null_model3 <- lm(selling_price_dollars ~ .-Make-engine-owner-fuel,
 anova(final_model, null_model3)
 ```
 
-
-# Final Multiple Linear Regression
+## Final Multiple Linear Regression
 
 ```{r}
 summary(final_model)
 ```
 
-# Interpretations of Full Model
+
+# Expectations 4
+
+## Non-linearity and non-constant variance check
+
+* Not linear: The relationship between the predictors and response is not linear (i.e we observe a bend in the relationship and the points are not evenly distributed around 0) 
+* Non-constant variance: there is non-constant variance (a clear funnel shape)
+
+```{r}
+## Residuals-vs-Fitted Plot (the 1st diagnostic plot):
+plot(final_model, which = 1)
+```
+
+## Step 1: Attempt to Address Nonlinearity
+*This attempt was not successful (i.e. adding polynomial terms and interaction terms did not improve non-linearity much at this point)*
+
+Generally, I'd address nonlinearity first via the steps below.
+
+Visualize the pairwise relationships between selling_price_dollars and the predictors (e.g. km_driven, mileage, max_power, seats, and age) to investigate what interaction or polynomial terms would be relevant to include.
+
+There is a non linear relationship between selling_price_dollars and age, km_driven, and possibly seats. 
+
+todo/ question: must we address nonlinearity before non-constant variance? \
+todo/ question: How to assess if an interaction term would be beneficial/ visualize if we should transform the interaction term? Just via domain knowledge? \
+todo/ question: Age and seats seemed to have gauassian relationship. are there other terms we can add for that case i.e. log?, exponential? \
+todo/ question: are we treating seats as a quantitiative or ordinal categorical variable? 
+
+
+```{r}
+plot(selling_price_dollars ~ km_driven, data = vehicles_lr)
+plot(selling_price_dollars ~ mileage, data = vehicles_lr)
+plot(selling_price_dollars ~ max_power, data = vehicles_lr)
+plot(selling_price_dollars ~ seats, data = vehicles_lr)
+plot(selling_price_dollars ~ age, data = vehicles_lr)
+```
+
+Add poly terms for km_drive, age, and seats, which appeared to have nonlinear relationships. We still observe significant nonlinearity and non-constant variance. 
+
+```{r}
+final_kmageseats_poly <- lm(selling_price_dollars~ .-Make-engine + I(km_driven^2) + I(age^2) + I(seats^2),
+             data = vehicles_lr)
+plot(final_model, which = 1)
+plot(final_kmageseats_poly, which = 1)
+```
+
+## Step 2: Address non-constant variance
+*This attempt was successful*
+Addressing non-constant variance via a log transformation of the Y variable (before adding polynomial/ interaction terms) was very successful at addressing aspects of non-linearity and non-constant variance. 
+
+```{r}
+final_logY <- lm(log(selling_price_dollars)~ .-Make-engine,
+             data = vehicles_lr)
+plot(final_logY , which = 1)
+```
+
+## Step 3: Address non-linearity
+*Not successful*
+After Step 2 (logY to address non-constant variance), we still observe some non-linearity via a bend in the residual curve. 
+
+We will retry the process used in step 1, but now using the transformed Y (i.e. log(Y)) 
+
+```{r}
+plot(log(selling_price_dollars) ~ km_driven, data = vehicles_lr)
+plot(log(selling_price_dollars) ~ mileage, data = vehicles_lr)
+plot(log(selling_price_dollars) ~ max_power, data = vehicles_lr)
+plot(log(selling_price_dollars) ~ seats, data = vehicles_lr)
+plot(log(selling_price_dollars) ~ age, data = vehicles_lr)
+```
+
+Adding age^2 helped reduce non-linearity. Adding poly terms of the other 4 variables made little to no difference. 
+```{r}
+final_logY_agepoly <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
+             data = vehicles_lr)
+plot(final_logY , which = 1)
+plot(final_logY_agepoly , which = 1)
+```
+
+Lets check whether adding interaction terms will help. None of the interaction terms made a significant enough difference in linearity to make it worth the additional complexity that would have been added to the mode. For example, adding max_power:km_driven made a slight difference, but it was minimal and it was not worth it. 
+```{r}
+final_logY_agepoly_interact <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2) + max_power:km_driven,
+             data = vehicles_lr)
+plot(final_logY_agepoly , which = 1)
+plot(final_logY_agepoly_interact , which = 1)
+
+```
+## Final model before checking for normality via qqplot
+
+The final model after model diagnostics is as follows
+```{r}
+final_logY_agepoly <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
+             data = vehicles_lr)
+final_model <- final_logY_agepoly
+
+plot(final_logY_agepoly, which = 1)
+```
+
+## Normality 
+
+There are slight deviations from the normal curve. This is fine, however, since the dataset consists of n = 7906 instances. 
+```{r}
+plot(final_model, which = 2)
+plot(density(resid(final_model)))
+
+```
+
+## Outlier analysis
+
+### Regression outliers via standardized residuals
+
+We observe various regression outliers via standardized residuals. The most extreme being observation 3378, 7521, and 5273
+```{r}
+plot(final_model, which=3) 
+plot(rstandard(final_model))
+text(x=1:nrow(vehicles_lr),y=rstandard(final_model), rownames(vehicles_lr), cex=0.6, pos=4, col="red")
+```
+### High-leverage points 
+
+We observe various high-leverage points via hatvalues. We observe a few high-leverage points, the top three being 3378, 4257, and 6048. 
+```{r}
+plot(hatvalues(final_model))
+text(x=1:nrow(vehicles_lr),y=hatvalues(final_model), rownames(vehicles_lr), cex=0.6, pos=4, col="red")
+```
+
+### Influential outliers
+
+We observe various influential outliers via cook's distance. Instance 3378 is the main influential outlier that we will investigate further. 
+```{r}
+plot(final_model, which = 4)
+```
+
+## Influential outlier: Instance 3378
+We observe it has km_driven 2,360,457 which is an incredibly high value (see distribution statistics and boxplot for km_driven below). That's more than 1.4million miles.
+```{r}
+vehicles_lr[3378,]
+```
+```{r}
+summary(vehicles_lr$km_driven)
+```
+
+```{r}
+boxplot(vehicles_lr$km_driven)
+```
+
+
+## Test what happens if we remove the outlier
+
+
+# Expectations 5
+
+## Interpretations of Full Model
 
 #Not sure if we are interpreting the final model of Expectation 3 or final model of Expectation 4???
 
@@ -166,14 +314,6 @@ Our model explainss 68.42% of variability in sellinng price.
 
 
 
-# Expectations 4
-# Non-linearity check -- Mileva's part
-
-```{r}
-
-## Residuals-vs-Fitted Plot (the 1st diagnostic plot):
-plot(final_model, which = 1)
-```
 
 
 
