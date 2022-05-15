@@ -155,7 +155,7 @@ summary(final_model)
 
 ## Non-linearity and non-constant variance check
 
-* Not linear: The relationship between the predictors and response is not linear (i.e we observe a bend in the relationship and the points are not evenly distributed around 0) 
+* Not linear: The relationship between the predictors and response is not linear (i.e we observe a bend in the relationship and the points are not evenly distributed around 0)  
 * Non-constant variance: there is non-constant variance (a clear funnel shape)
 
 ```{r}
@@ -179,6 +179,7 @@ todo/ question: are we treating seats as a quantitiative or ordinal categorical 
 
 
 ```{r}
+# plot of response against individual predictors. 
 plot(selling_price_dollars ~ km_driven, data = vehicles_lr)
 plot(selling_price_dollars ~ mileage, data = vehicles_lr)
 plot(selling_price_dollars ~ max_power, data = vehicles_lr)
@@ -189,6 +190,7 @@ plot(selling_price_dollars ~ age, data = vehicles_lr)
 Add poly terms for km_drive, age, and seats, which appeared to have nonlinear relationships. We still observe significant nonlinearity and non-constant variance. 
 
 ```{r}
+# seeing if adding polynomial terms helps. It doesn't
 final_kmageseats_poly <- lm(selling_price_dollars~ .-Make-engine + I(km_driven^2) + I(age^2) + I(seats^2),
              data = vehicles_lr)
 plot(final_model, which = 1)
@@ -200,18 +202,20 @@ plot(final_kmageseats_poly, which = 1)
 Addressing non-constant variance via a log transformation of the Y variable (before adding polynomial/ interaction terms) was very successful at addressing aspects of non-linearity and non-constant variance. 
 
 ```{r}
+# log transformation of response to address non-constant variance
 final_logY <- lm(log(selling_price_dollars)~ .-Make-engine,
              data = vehicles_lr)
 plot(final_logY , which = 1)
 ```
 
 ## Step 3: Address non-linearity
-*Not successful*
+*successful add $age^2$ term*
 After Step 2 (logY to address non-constant variance), we still observe some non-linearity via a bend in the residual curve. 
 
 We will retry the process used in step 1, but now using the transformed Y (i.e. log(Y)) 
 
 ```{r}
+# plot response against individual predictors
 plot(log(selling_price_dollars) ~ km_driven, data = vehicles_lr)
 plot(log(selling_price_dollars) ~ mileage, data = vehicles_lr)
 plot(log(selling_price_dollars) ~ max_power, data = vehicles_lr)
@@ -221,6 +225,7 @@ plot(log(selling_price_dollars) ~ age, data = vehicles_lr)
 
 Adding age^2 helped reduce non-linearity. Adding poly terms of the other 4 variables made little to no difference. 
 ```{r}
+# Add age^2 polynomial term
 final_logY_agepoly <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
              data = vehicles_lr)
 plot(final_logY , which = 1)
@@ -229,16 +234,18 @@ plot(final_logY_agepoly , which = 1)
 
 Lets check whether adding interaction terms will help. None of the interaction terms made a significant enough difference in linearity to make it worth the additional complexity that would have been added to the mode. For example, adding max_power:km_driven made a slight difference, but it was minimal and it was not worth it. 
 ```{r}
+# add interaction terms. Not successful
 final_logY_agepoly_interact <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2) + max_power:km_driven,
              data = vehicles_lr)
 plot(final_logY_agepoly , which = 1)
 plot(final_logY_agepoly_interact , which = 1)
-
 ```
 ## Final model before checking for normality via qqplot
 
-The final model after model diagnostics is as follows
+The final model after model diagnostics is as follows:
+log(selling_price_dollars)~ .-Make-engine + I(age^2)
 ```{r}
+# final model called "final_model" with the form log(selling_price_dollars)~ .-Make-engine + I(age^2)
 final_logY_agepoly <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
              data = vehicles_lr)
 final_model <- final_logY_agepoly
@@ -281,7 +288,7 @@ plot(final_model, which = 4)
 ```
 
 ## Influential outlier: Instance 3378
-We observe it has km_driven 2,360,457 which is an incredibly high value (see distribution statistics and boxplot for km_driven below). That's more than 1.4million miles.
+We observe it has km_driven 2,360,457 which is an incredibly high value (see distribution statistics and boxplot for km_driven below). That's more than 1.4million miles. That said there is nothing systematically different about this instance compared to the other instances in the data. 
 ```{r}
 vehicles_lr[3378,]
 ```
@@ -296,10 +303,55 @@ boxplot(vehicles_lr$km_driven)
 
 ## Test what happens if we remove the outlier
 
+```{r}
+# remove outlier
+vehicles_lr_wout_outlier <- vehicles_lr[-c(3378),]
+
+# Refit model without outlier
+final_model_wout_outlier <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
+             data = vehicles_lr_wout_outlier)
+```
+
+```{r}
+# Model diagnostics after removing outlier
+plot(final_model_wout_outlier, which = 1)
+plot(final_model_wout_outlier, which = 2)
+plot(final_model_wout_outlier, which = 4)
+```
+
+There is no significant difference in model performance (RSE/ R^2) if we exclude the outlier. 
+Thus, we will not remove this influential outlier from the model.
+
+Model performance with outlier:   
+
+* $RSE = 0.30$ \
+* $R^2 = 0.87$
+
+Model performance without outlier:   
+* $RSE = 0.30$ \
+* $R^2 = 0.87$
+
+
+```{r}
+summary(final_model)
+summary(final_model_wout_outlier)
+```
+
 
 # Expectations 5
 
 ## Interpretations of Full Model
+
+The final model after model diagnostics is as follows:
+
+* log(selling_price_dollars) ~ .-Make-engine + I(age^2) \
+* We chose not to remove any outliers
+
+```{r}
+# final model
+summary(final_model, data = vehicles_lr)
+```
+
 
 #Not sure if we are interpreting the final model of Expectation 3 or final model of Expectation 4???
 
