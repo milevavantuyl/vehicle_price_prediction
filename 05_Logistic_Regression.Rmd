@@ -1,0 +1,136 @@
+---
+title: "Logistic_Regression"
+author: "Marina Sanchez"
+date: "5/13/2022"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyr)
+
+cars <- read_csv("data/cars_processed.csv")
+
+head(cars)
+
+cars$Make <- as.factor(cars$Make)
+cars$fuel <- as.factor(cars$fuel)
+cars$seller_type <- as.factor(cars$seller_type)
+cars$transmission <- as.factor(cars$transmission)
+cars$owner <- as.factor(cars$owner)
+cars$selling_price_binary <- as.factor(cars$selling_price_binary)
+```
+
+
+```{r}
+summary(cars)
+```
+```{r}
+#Remove redundant response (different formats): selling_price_dollars, selling_price
+#Only the categorical response is required: selling_price_dollars
+#Remove also year, since we already have age
+
+cars <- cars %>% select(-c(selling_price_dollars, selling_price, year))
+head(cars)
+```
+
+
+# Fit an initial multiple logistic regression with all of the predictors 
+```{r}
+glm.multiple <- glm(selling_price_binary ~ .,
+                    data=cars,
+                    family="binomial")
+
+summary(glm.multiple)
+```
+We are gettin the Warning "glm.fit: fitted probabilities numerically 0 or 1 occurred". This might be happening due to extreme outliers or influential observations.
+
+# Deal with outliers
+```{r}
+## Influence via Cook's distance:
+cooks.distance(glm.multiple)
+plot(glm.multiple, which=4)
+```
+```{r}
+#Removing observations 142, 2625 and 6896
+cars <- cars[-c(144, 2635, 6923), ]
+
+#Fit Logistic regression again
+glm.multiple <- glm(selling_price_binary ~ .,
+                    data=cars,
+                    family="binomial")
+glm.multiple
+
+summary(glm.multiple)
+```
+
+There are some predictors that look to be significant: MakeChevrolet, MakeTata, km_driven, seller_typeTrustmark Dealer, transmissionManual, ownerSecond Owner, mileage, max_power, seats and age   
+
+# Using VIF to remove colinearity
+```{r}
+library(car)
+
+vif(glm.multiple)
+```
+# We are removing Make since it has the highest VIF
+```{r}
+cars <- cars %>% select(-Make)
+
+glm.multiple_red <- glm(selling_price_binary ~ .,
+                    data=cars,
+                    family="binomial")
+
+vif(glm.multiple_red)
+```
+All the VIF values are below 5 now.
+
+# Apply AIC for variable selection
+```{r}
+step(glm.multiple_red)
+```
+Our final model will include the predictors: km_driven + fuel + seller_type + transmission + owner + engine + max_power + age
+@To-Do Full equation
+
+#Fit logistic regression for our final model
+```{r}
+cars <- cars %>% select(-c(mileage, seats))
+
+glm.multiple_final <- glm(selling_price_binary ~ .,
+                      data=cars,
+                     family="binomial")
+
+summary(glm.multiple_final)
+```
+Most statistical significant predictors: transmissionManual, engine, max_power, age
+@To-Do Fitted equation
+@To-Do Interpret coefficients
+
+# 95% Confidence Intervals
+```{r}
+confint(glm.multiple_final, parm=c("transmissionManual", "engine", "max_power", "age"), level = 0.95)
+```
+@To-Do Interpret Confidence Intervals
+
+# Test model significance using likelihood ratio test
+```{r}
+#significance of full model/subset of predictors
+
+glm.null <- glm(selling_price_binary ~ 1,
+                data=cars,
+                family="binomial")
+
+# Test for significance of the full model:
+anova(glm.null, glm.multiple_final, test = "LRT")
+```
+The p-val of Full model is almost 0. This means that there is there is an improvement on Full model over Null. Our model is significant.
+
+# Test for significance of specific predictors?
+@To-do
+```{r}
+# Test for significance of specific predictors
+anova(glm.balance, glm.multiple, test = "LRT")
+```
+
+
