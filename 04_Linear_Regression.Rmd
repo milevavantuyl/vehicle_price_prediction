@@ -164,19 +164,7 @@ plot(final_model, which = 1)
 ```
 
 ## Step 1: Attempt to Address Nonlinearity
-*This attempt was not successful (i.e. adding polynomial terms and interaction terms did not improve non-linearity much at this point)*
-
-Generally, I'd address nonlinearity first via the steps below.
-
-Visualize the pairwise relationships between selling_price_dollars and the predictors (e.g. km_driven, mileage, max_power, seats, and age) to investigate what interaction or polynomial terms would be relevant to include.
-
-There is a non linear relationship between selling_price_dollars and age, km_driven, and possibly seats. 
-
-todo/ question: must we address nonlinearity before non-constant variance? \
-todo/ question: How to assess if an interaction term would be beneficial/ visualize if we should transform the interaction term? Just via domain knowledge? \
-todo/ question: Age and seats seemed to have gauassian relationship. are there other terms we can add for that case i.e. log?, exponential? \
-todo/ question: are we treating seats as a quantitiative or ordinal categorical variable? 
-
+*Unsuccessful (i.e. adding polynomial terms and interaction terms did not improve non-linearity)*
 
 ```{r}
 # plot of response against individual predictors. 
@@ -187,14 +175,13 @@ plot(selling_price_dollars ~ seats, data = vehicles_lr)
 plot(selling_price_dollars ~ age, data = vehicles_lr)
 ```
 
-Add poly terms for km_drive, age, and seats, which appeared to have nonlinear relationships. We still observe significant nonlinearity and non-constant variance. 
+Add interaction and poly terms. We still observe significant nonlinearity and non-constant variance. 
 
 ```{r}
 # seeing if adding polynomial terms helps. It doesn't
-final_kmageseats_poly <- lm(selling_price_dollars~ .-Make-engine + I(km_driven^2) + I(age^2) + I(seats^2),
-             data = vehicles_lr)
+final_nonlinearity <- lm(selling_price_dollars~ .-Make-engine + mileage:km_driven + I(age^2),data = vehicles_lr)
 plot(final_model, which = 1)
-plot(final_kmageseats_poly, which = 1)
+plot(final_nonlinearity, which = 1)
 ```
 
 ## Step 2: Address non-constant variance
@@ -208,49 +195,17 @@ final_logY <- lm(log(selling_price_dollars)~ .-Make-engine,
 plot(final_logY , which = 1)
 ```
 
-## Step 3: Address non-linearity
-*successful add $age^2$ term*
-After Step 2 (logY to address non-constant variance), we still observe some non-linearity via a bend in the residual curve. 
-
-We will retry the process used in step 1, but now using the transformed Y (i.e. log(Y)) 
-
-```{r}
-# plot response against individual predictors
-plot(log(selling_price_dollars) ~ km_driven, data = vehicles_lr)
-plot(log(selling_price_dollars) ~ mileage, data = vehicles_lr)
-plot(log(selling_price_dollars) ~ max_power, data = vehicles_lr)
-plot(log(selling_price_dollars) ~ seats, data = vehicles_lr)
-plot(log(selling_price_dollars) ~ age, data = vehicles_lr)
-```
-
-Adding age^2 helped reduce non-linearity. Adding poly terms of the other 4 variables made little to no difference. 
-```{r}
-# Add age^2 polynomial term
-final_logY_agepoly <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
-             data = vehicles_lr)
-plot(final_logY , which = 1)
-plot(final_logY_agepoly , which = 1)
-```
-
-Lets check whether adding interaction terms will help. None of the interaction terms made a significant enough difference in linearity to make it worth the additional complexity that would have been added to the mode. For example, adding max_power:km_driven made a slight difference, but it was minimal and it was not worth it. 
-```{r}
-# add interaction terms. Not successful
-final_logY_agepoly_interact <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2) + max_power:km_driven,
-             data = vehicles_lr)
-plot(final_logY_agepoly , which = 1)
-plot(final_logY_agepoly_interact , which = 1)
-```
 ## Final model before checking for normality via qqplot
 
 The final model after model diagnostics is as follows:
-log(selling_price_dollars)~ .-Make-engine + I(age^2)
+log(selling_price_dollars)~ .-Make-engine
 ```{r}
-# final model called "final_model" with the form log(selling_price_dollars)~ .-Make-engine + I(age^2)
-final_logY_agepoly <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
+# final model called "final_model" with the form log(selling_price_dollars)~ .-Make-engine
+final_logY <- lm(log(selling_price_dollars)~ .-Make-engine,
              data = vehicles_lr)
-final_model <- final_logY_agepoly
+final_model <- final_logY
 
-plot(final_logY_agepoly, which = 1)
+plot(final_logY, which = 1)
 ```
 
 ## Normality 
@@ -259,7 +214,6 @@ There are slight deviations from the normal curve. This is fine, however, since 
 ```{r}
 plot(final_model, which = 2)
 plot(density(resid(final_model)))
-
 ```
 
 ## Outlier analysis
