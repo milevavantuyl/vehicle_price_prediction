@@ -28,3 +28,21 @@ vehicles[, factor_column_names] <- lapply(vehicles[,factor_column_names], factor
 head(vehicles)
 ```
 
+# Contingency table
+```{r}
+price_transmission_table <- with(vehicles, table(selling_price_binary,transmission))
+price_transmission_table
+```
+
+# Proportion table. 
+The conditional proportion table indicates they are likely dependent. 
+```{r}
+with(vehicles, prop.table(price_transmission_table,1))
+
+```
+
+```{r}
+chisq.test(price_transmission_table)
+pchisq(1564.5, df=1, lower.tail=F)
+```
+
