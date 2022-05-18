@@ -14,6 +14,8 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 library(tidyverse)
+#scaling the exase
+library("scales")
 ```
 
 # Read Data
@@ -25,49 +27,250 @@ vehicles <- read_csv("data/cars_processed.csv")
 factor_column_names <- colnames(vehicles %>% select(where(is.character)))
 vehicles[, factor_column_names] <- lapply(vehicles[,factor_column_names], factor)
 
+# Features for EDA
+vehicles_lr <- vehicles %>% select(-c(year, selling_price, selling_price_binary))
+
+#Change the order of columns
+vehicles_lr <- vehicles_lr[, c(1,2,3,4,5,6,7,8,9,10,12,11)]
+
 head(vehicles)
 ```
 
-# Further Discovery
 
-## Factor Levels
+
+
+**Distribution of Selling Price in Dollars**
+
 ```{r}
-#levels of Make
-unique(vehicles$Make)
+hist <- ggplot(data = vehicles, aes(x=selling_price_dollars)) +
+geom_histogram(color="black", fill="lightblue", boundary=0, binwidth = 5000, closed="left") +
+#scale_y_continuous(limits=c(0,500), expand=c(0,0)) +
+  scale_x_continuous(labels = comma)
+labs(title="Distribution of Selling Price in Dollars",x="Selling price in dollars", y="Frequency") +
+theme_classic() 
 
-#levels of fuel
-unique(vehicles$fuel)
+mytheme <- theme(
+axis.line.y=element_blank(),
+axis.text.y=element_blank(),
+axis.ticks.y=element_blank(),
+axis.title.y=element_blank()
+)
 
-#levels of seller_type
-unique(vehicles$seller_type)
+box <- ggplot(data = vehicles, aes(y=selling_price_dollars)) +
+geom_boxplot(color="black",fill="lightblue", outlier.shape=21, outlier.fill="lightblue", outlier.alpha=0.3) +
+  scale_x_continuous(labels = comma) +
+coord_flip() + theme_classic() + mytheme +
+theme(
+axis.line.x=element_blank(),
+axis.text.x=element_blank(),
+axis.ticks.x=element_blank(),
+axis.title.x=element_blank()
+)
 
-#levels of transmission
-unique(vehicles$transmission)
+library(cowplot)
+plot_grid(hist, box, ncol = 1, rel_heights = c(0.85, 0.15), align = 'v', axis = 'lr')
 
-#levels of owner 
-unique(vehicles$owner)
-
-#unique values of seats
-sort(unique(vehicles$seats))
-
-#unique values of age
-sort(unique(vehicles$age))
 ```
-## Distributions of Numeric Variables
+
+**The Distribution of Binary Selling Price**
+
 ```{r}
-#Distribution of selling_price
-hist(vehicles$selling_price)
+vehicles$selling_price_binary <- factor(vehicles$selling_price_binary, c("Yes", "No"))
 
-#Distribution of km_driven
-hist(vehicles$km_driven)
+library(RColorBrewer)
+mycols <- brewer.pal(8, "Accent")[2:3]
 
-#Distribution of mileage
-hist(vehicles$mileage)
 
-#Distribution of engine
-hist(vehicles$engine)
+ggplot(data=vehicles, aes(x=selling_price_binary)) +
+labs(title="Distribution of Binary Selling Price",x="Binary selling price", y="Frequency") +
+scale_y_continuous(expand=c(0,0)) +
+coord_cartesian(ylim=c(0,7000)) +
+geom_bar(aes(fill=selling_price_binary)) +
+  scale_fill_manual(values=mycols)
 
-#Distribution of max_power
-hist(vehicles$max_power)
+
+
+```
+
+
+**Distribution of Selling Price in Dollars by km driven**
+
+```{r fig.width=5}
+scat <- ggplot(vehicles, aes(x=km_driven, y=selling_price_dollars, color=selling_price_binary)) + 
+  geom_point(size=2) + 
+  labs(title="Distribution of Selling Price in Dollars by km driven",x="KM Driven", y=" Selling Price in Dollars")+ 
+  scale_y_continuous(labels = comma)
+
+mytheme <- theme(
+axis.line.y=element_blank(),
+axis.text.y=element_blank(),
+axis.ticks.y=element_blank(),
+axis.title.y=element_blank()
+)
+
+box <- ggplot(data = vehicles, aes(y=km_driven)) +
+geom_boxplot(color="black",fill="lightblue", outlier.shape=21, outlier.fill="lightblue", outlier.alpha=0.3) +
+  scale_x_continuous(labels = comma) +
+coord_flip() + theme_classic() + mytheme +
+theme(
+axis.line.x=element_blank(),
+axis.text.x=element_blank(),
+axis.ticks.x=element_blank(),
+axis.title.x=element_blank()
+)
+
+library(cowplot)
+plot_grid(scat, box, ncol = 1, rel_heights = c(0.85, 0.15), align = 'v', axis = 'lr')
+```
+
+
+__Second Plot__
+
+```{r}
+library(ggpubr)
+ggscatterhist(
+  vehicles, x = "km_driven", y = "selling_price_dollars", color= "selling_price_binary",
+  margin.plot = "boxplot",
+  title = "Distribution of Selling Price in Dollars by km driven",
+  xlab = "KM Driven",
+  ylab = "Selling Price in Dollars",
+  bins=15,
+  margin.params = list(fill = "lightblue", outlier.shape=1)
+)
+```
+
+
+**Distribution of Selling Price in Dollars by Year**
+
+```{r fig.width=5}
+library("scales")
+
+ggplot(vehicles, aes(x=year, y=selling_price_dollars, color=selling_price_binary)) + 
+  geom_point(size=2) + 
+  labs(title="Distribution of Selling Price in Dollars by Year",x="Year", y=" Selling Price in Dollars") +
+  scale_y_continuous(labels = comma)
+#+
+ # coord_cartesian(ylim = c(0, 20000))
+```
+
+
+
+
+
+# Correlation Matrix 
+
+```{r}
+vehicles_cor <- vehicles_lr %>% select(-c(Make, fuel, seller_type, transmission, owner))
+
+# Correlation matrix
+cor_mat <- round(cor(vehicles_cor),2)
+
+#Get upper triangle
+get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+}
+
+upper_tri <- get_upper_tri(cor_mat)
+
+# Melt the correlation matrix
+library(reshape2)
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+
+# Heatmap
+library(ggplot2)
+ggheatmap <- ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1,
+                                   size = 12, hjust = 1))+
+  coord_fixed()
+
+
+#Heatmap with values
+ggheatmap + 
+  geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
+theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(0.6, 0.7),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "top", title.hjust = 0.5))
+```
+
+
+# Distribution of Categorical Variables
+
+
+**selling price in dollars ~ fuel**
+
+
+
+```{r}
+vehicles_lr$fuel <- factor(vehicles_lr$fuel, c("Diesel", "Petrol", "CNG", "LPG"))
+
+ggplot(data=vehicles_lr, aes(x=fuel, y=selling_price_dollars, fill=fuel)) +
+geom_boxplot() +
+guides(fill="none")+
+  scale_y_continuous(labels = comma)+
+    labs(title="Distribution of Selling Price in Dollars by Fuel",x="Fuel", y=" Selling Price in Dollars") 
+```
+
+**selling price in dollars ~ fuel : zoomed in**
+
+```{r}
+ggplot(data=vehicles_lr, aes(x=fuel, y=selling_price_dollars, fill=fuel)) +
+geom_boxplot() +
+coord_cartesian(ylim = c(0, 20000)) +
+guides(fill="none") +
+    scale_y_continuous(labels = comma)+
+    labs(title="Distribution of Selling Price in Dollars by Fuel",x="Fuel", y=" Selling Price in Dollars") 
+```
+
+**selling price in dollars ~ transmission**
+
+```{r}
+ggplot(data=vehicles_lr, aes(x=transmission, y=selling_price_dollars, fill=transmission)) +
+geom_boxplot() +
+#coord_cartesian(ylim = c(0, 50000)) +
+guides(fill="none") +
+    scale_y_continuous(labels = comma)+
+    labs(title="Distribution of Selling Price in Dollars by Transmission",x="Transmission", y=" Selling Price in Dollars") 
+```
+
+**selling price in dollars ~ seller type : zoomed in**
+```{r}
+ggplot(data=vehicles_lr, aes(x=seller_type, y=selling_price_dollars, fill=seller_type)) +
+geom_boxplot() +
+coord_cartesian(ylim = c(0, 50000)) +
+guides(fill="none") +
+  scale_y_continuous(labels = comma)+
+  labs(title="Distribution of Selling Price in Dollars by Seller Type",x="Seller Type", y=" Selling Price in Dollars") 
+
+```
+
+
+
+**selling price in dollars ~ owner : zoomed in**
+
+```{r}
+vehicles_lr$owner <- factor(vehicles_lr$owner,     # Reorder factor levels
+                         c("First Owner", "Second Owner", "Third Owner", "Fourth & Above Owner", "Test Drive Car"))
+ggplot(data=vehicles_lr %>% filter(owner %in% c("First Owner", "Second Owner", "Third Owner", "Fourth & Above Owner")), aes(x=owner, y=selling_price_dollars, fill=owner)) +
+geom_boxplot() +
+coord_cartesian(ylim = c(0, 20000)) +
+guides(fill="none") +
+   scale_y_continuous(labels = comma)+
+  labs(title="Distribution of Selling Price in Dollars by Owner",x="Owner", y=" Selling Price in Dollars") 
+
 ```
 
