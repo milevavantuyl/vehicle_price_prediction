@@ -41,8 +41,29 @@ with(vehicles, prop.table(price_transmission_table,1))
 
 ```
 
+# Chi.sq test
 ```{r}
-chisq.test(price_transmission_table)
+chisq.test(price_transmission_table, correct = FALSE)
 pchisq(1564.5, df=1, lower.tail=F)
+```
+
+Chi-squared test statistic: 
+$$\chi^2 = \sum_{ij}{\frac{(E_{ij} - Observed_{ij})^2}{E_{ij}}}$$
+
+# Expected counts
+```{r}
+expected_counts <- function(X) { # X is a contingency table of arbitrary size
+  
+  row_sums <- matrix(rowSums(X), nrow = length(rowSums(X)))  # nrow x 1 matrix
+  col_sums <- matrix(colSums(X), ncol = length(colSums(X))) # 1 x ncol matrix
+  
+  # Matrix of expected counts
+  expected <- (row_sums %*% col_sums) / sum(X) 
+  print(expected)
+}
+```
+
+```{r}
+expected_counts(price_transmission_table)
 ```
 

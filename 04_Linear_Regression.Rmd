@@ -1,6 +1,8 @@
 ---
 title: "04 Linear Regression"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -251,7 +253,7 @@ summary(vehicles_lr$km_driven)
 ```
 
 ```{r}
-boxplot(vehicles_lr$km_driven)
+boxplot(vehicles_lr$km_driven, main = "Distribution of km_driven")
 ```
 
 
