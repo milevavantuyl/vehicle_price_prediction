@@ -30,7 +30,7 @@ head(vehicles)
 
 # Contingency table
 ```{r}
-price_transmission_table <- with(vehicles, table(selling_price_binary,transmission))
+price_transmission_table <- with(vehicles, table(transmission, selling_price_binary))
 price_transmission_table
 ```
 
