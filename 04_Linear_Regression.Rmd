@@ -256,7 +256,6 @@ summary(vehicles_lr$km_driven)
 boxplot(vehicles_lr$km_driven, main = "Distribution of km_driven")
 ```
 
-
 ## Test what happens if we remove the outlier
 
 ```{r}
@@ -264,8 +263,7 @@ boxplot(vehicles_lr$km_driven, main = "Distribution of km_driven")
 vehicles_lr_wout_outlier <- vehicles_lr[-c(3378),]
 
 # Refit model without outlier
-final_model_wout_outlier <- lm(log(selling_price_dollars)~ .-Make-engine + I(age^2),
-             data = vehicles_lr_wout_outlier)
+final_model_wout_outlier <- lm(log(selling_price_dollars)~ .-Make-engine,data = vehicles_lr_wout_outlier)
 ```
 
 ```{r}
@@ -292,7 +290,10 @@ Model performance without outlier:
 summary(final_model)
 summary(final_model_wout_outlier)
 ```
-
+# Prediction
+```{r}
+predict(final_model, newdata = data.frame(Make = "Toyota", engine = 1800, km_driven = 154497, fuel = "Petrol", seller_type="Individual", transmission="Automatic", owner = "Third Owner", mileage = 19.30, max_power = 130, seats = 5, age = 9))
+```
 
 # Expectations 5
 
@@ -300,7 +301,6 @@ summary(final_model_wout_outlier)
 
 The final model after model diagnostics is as follows:
 
-* log(selling_price_dollars) ~ .-Make-engine + I(age^2) \
 * We chose not to remove any outliers
 
 ```{r}
